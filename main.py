@@ -9,6 +9,8 @@ from Utilities import *
 from UtilitiesExact import *
 from Coloring_MWIS_heuristics import exact_MWIS, greedy_MWIS, greedy1_MWIS
 
+from resourceWeightsUtilities import append_assigned_numbers, add_assigned_number_to_node_weights
+
 import random
 
 random.seed(3)
@@ -818,9 +820,9 @@ print("30-----weight of length in same job: {0}".format(LW_value))
 # load all the tasks
 #Input_File = 'input_T111_TS10_D3.txt'
 #Input_File = 'input_T111_TS10_liteF3.txt'
-Input_File = 'input_Week1_lite.txt'
+# Input_File = 'input_Week1_lite.txt'
 # Input_File = 'input_Week1.txt' # about 0.6s
-# Input_File = 'input_Week2.txt'   # about 15s
+Input_File = 'input_Week2.txt'   # about 15s
 # print("35-----The Input_File: {0}".format(Input_File))
 
 # load all the tasks
@@ -840,6 +842,21 @@ print("839-----Pre_AllNodesCondition: {0}".format(Pre_AllNodesCondition))
 
 AllNodesCondition = ADDIndexToAllNodesCondition(Pre_AllNodesCondition)
 print("842-----original AllNodesCondition: {0}".format(AllNodesCondition))
+
+AllNodesCondition_copy9 = AllNodesCondition.copy()
+resource_mapping = {
+    'R1': 10,
+    'R2': 20,
+    'R3': 30,
+    'R4': 40,
+    'R5': 50,
+    'R6': 60,
+    'R7': 70,
+    'E':  0
+}
+AvailWieghtsPerNode = append_assigned_numbers(AllNodesCondition_copy9, resource_mapping)
+print("849-----AvailWieghtsPerNode: {0}".format(AvailWieghtsPerNode))
+
 
 AllNodesCondition_copy = AllNodesCondition.copy()
 AllNodesCondition_copy2 = AllNodesCondition.copy()
@@ -906,7 +923,18 @@ Final_NodesANDWeights_dict = FinalWeightsForColoring(NodesANDWeights_dict, final
 
 # getting nodes and associated intervals internal
 nodes_intervals = Final_NodesANDWeights_dict
-print("860-----nodes_intervals: {0}".format(nodes_intervals))
+print("926-----nodes_intervals: {0}".format(nodes_intervals))
+
+new_node_intervals = add_assigned_number_to_node_weights(
+    records=AvailWieghtsPerNode,      # your list of records ending with [node_id, assigned]
+    node_intervals=nodes_intervals,   # your existing dict
+    in_place=False,                   # keep original dict unchanged
+    strict=True                       # error if any node id is missing
+)
+print("934-----new_node_intervals : {0}".format(new_node_intervals ))
+
+nodes_intervals = new_node_intervals
+
 node_list_interval_order = getIntervalOrder(nodes_intervals)
 # print("861-----node_list_interval_order: {0}".format(node_list_interval_order))
 node_list_GWMIN_order = getNodeListGWMINOrder(G_copy)
