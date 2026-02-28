@@ -84,3 +84,56 @@ def add_assigned_number_to_node_weights(records, node_intervals, *, in_place=Fal
         updated[key] = float(updated[key]) + float(add_val)
 
     return updated
+
+
+import pandas as pd
+
+def load_resource_mapping_from_excel(filepath,
+                                     resource_column='Resource',
+                                     weight_column='Weight'):
+    """
+    Load resource mapping from Excel file.
+
+    Parameters
+    ----------
+    filepath : str
+        Path to Excel file.
+    resource_column : str
+        Column name containing resource labels (e.g., 'R1').
+    weight_column : str
+        Column name containing numeric weights.
+
+    Returns
+    -------
+    dict
+        Mapping dictionary like {'R1': 10, 'R2': 20, ...}
+    """
+
+    df = pd.read_excel(filepath)
+
+    if resource_column not in df.columns or weight_column not in df.columns:
+        raise ValueError("Specified columns not found in Excel file.")
+
+    mapping = dict(zip(df[resource_column], df[weight_column]))
+
+    return mapping
+
+import copy
+
+def append_number_from_resource_mapping(data, resource_mapping):
+    """
+    Append weight to each record based on resource label.
+    """
+
+    new_data = copy.deepcopy(data)
+
+    for record in new_data:
+        resource_label = record[5][0]
+
+        if resource_label not in resource_mapping:
+            raise ValueError(f"Resource '{resource_label}' not found in mapping.")
+
+        record.append(resource_mapping[resource_label])
+
+    return new_data
+

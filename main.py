@@ -9,7 +9,7 @@ from Utilities import *
 from UtilitiesExact import *
 from Coloring_MWIS_heuristics import exact_MWIS, greedy_MWIS, greedy1_MWIS
 
-from resourceWeightsUtilities import append_assigned_numbers, add_assigned_number_to_node_weights
+from resourceWeightsUtilities import *
 
 import random
 
@@ -828,7 +828,7 @@ Input_File = 'input_Week2.txt'   # about 15s
 # load all the tasks
 Tasks = open(Input_File)
 #resources_order = ['R1', 'R2', 'R3', 'R4'] #T100 #T110
-resources_order = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7','E'] # for T25D
+resources_order = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10', 'R11', 'R12', 'E'] # for T25D
 #resources_order = ['M1', 'M2','M3','M4',
 #                   'T1','T2','T3','T5','T6','T7','T8','T9','T10','T11','T12']
 jobs_order = ['C1', 'C2', 'C3', 'P1', 'P2', 'OR'] #T101 #T101 #T104
@@ -844,18 +844,38 @@ AllNodesCondition = ADDIndexToAllNodesCondition(Pre_AllNodesCondition)
 print("842-----original AllNodesCondition: {0}".format(AllNodesCondition))
 
 AllNodesCondition_copy9 = AllNodesCondition.copy()
-resource_mapping = {
-    'R1': 10,
-    'R2': 20,
-    'R3': 30,
-    'R4': 40,
-    'R5': 50,
-    'R6': 60,
-    'R7': 70,
-    'E':  0
-}
-AvailWieghtsPerNode = append_assigned_numbers(AllNodesCondition_copy9, resource_mapping)
-print("849-----AvailWieghtsPerNode: {0}".format(AvailWieghtsPerNode))
+# resource_mapping = {
+#     'R1': 10,
+#     'R2': 20,
+#     'R3': 30,
+#     'R4': 40,
+#     'R5': 50,
+#     'R6': 60,
+#     'R7': 70,
+#     'R8': 30,
+#     'R9': 40,
+#     'R10': 50,
+#     'R11': 60,
+#     'R12': 70,
+#     'E':  0
+# }
+# AvailWieghtsPerNode = append_assigned_numbers(AllNodesCondition_copy9, resource_mapping)
+# print("849-----AvailWieghtsPerNode: {0}".format(AvailWieghtsPerNode))
+
+
+excel_path = "WeightDataTemplate.csv"
+
+resource_mapping = load_resource_mapping_from_excel(
+    excel_path,
+    resource_column='Resource',
+    weight_column='Weight'
+)
+
+AvailWieghtsPerNode = append_number_from_resource_mapping(
+    AllNodesCondition_copy9,
+    resource_mapping
+)
+print("878-----AvailWieghtsPerNode: {0}".format(AvailWieghtsPerNode))
 
 
 AllNodesCondition_copy = AllNodesCondition.copy()
