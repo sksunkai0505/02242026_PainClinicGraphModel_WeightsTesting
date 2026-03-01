@@ -1,3 +1,7 @@
+import copy
+import pandas as pd
+
+
 def append_assigned_numbers(data, resource_mapping):
     """
     Append a number to each record based on its resource label,
@@ -27,7 +31,6 @@ def append_assigned_numbers(data, resource_mapping):
         New list with appended assigned numbers.
     """
 
-    import copy
     new_data = copy.deepcopy(data)
 
     for record in new_data:
@@ -86,39 +89,70 @@ def add_assigned_number_to_node_weights(records, node_intervals, *, in_place=Fal
     return updated
 
 
-import pandas as pd
 
-def load_resource_mapping_from_excel(filepath,
-                                     resource_column='Resource',
-                                     weight_column='Weight'):
+def load_resource_mapping_from_csv(
+    filepath: str,
+    resource_column: str = "ProviderID",
+    weight_column: str = "Available_Prob",
+    *,
+    scale_factor: float = 10.0,
+    default_for_E: float = 0.0,
+    allow_duplicates: bool = False,
+) -> dict:
     """
-    Load resource mapping from Excel file.
+    Load resource->weight mapping from a CSV file and scale weights.
 
     Parameters
     ----------
     filepath : str
-        Path to Excel file.
+        Path to CSV file.
     resource_column : str
-        Column name containing resource labels (e.g., 'R1').
+        Column containing resource labels.
     weight_column : str
-        Column name containing numeric weights.
+        Column containing numeric weights.
+    scale_factor : float
+        Multiply weight_column values by this factor (default = 10).
+    default_for_E : float
+        Default value if 'E' is not present in CSV.
+    allow_duplicates : bool
+        If True, duplicates are averaged; otherwise error.
 
     Returns
     -------
     dict
-        Mapping dictionary like {'R1': 10, 'R2': 20, ...}
+        Mapping dictionary {resource: scaled_weight}
     """
 
-    df = pd.read_excel(filepath)
+    df = pd.read_csv(filepath)
 
     if resource_column not in df.columns or weight_column not in df.columns:
-        raise ValueError("Specified columns not found in Excel file.")
+        raise ValueError(
+            f"Columns not found. Need '{resource_column}' and '{weight_column}'. "
+            f"CSV has: {list(df.columns)}"
+        )
+
+    df[resource_column] = df[resource_column].astype(str).str.strip()
+    df[weight_column] = pd.to_numeric(df[weight_column], errors="raise")
+
+    if df[resource_column].duplicated().any():
+        if not allow_duplicates:
+            duplicates = df.loc[df[resource_column].duplicated(), resource_column].tolist()
+            raise ValueError(f"Duplicate ProviderIDs found: {duplicates}")
+        df = df.groupby(resource_column, as_index=False)[weight_column].mean()
+
+    # 🔹 Scale weights
+    df[weight_column] = df[weight_column] * scale_factor
+
+    df = df.dropna(subset=[weight_column])
 
     mapping = dict(zip(df[resource_column], df[weight_column]))
 
+    # Ensure default for E
+    mapping.setdefault("E", float(default_for_E))
+
     return mapping
 
-import copy
+
 
 def append_number_from_resource_mapping(data, resource_mapping):
     """

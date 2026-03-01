@@ -863,14 +863,17 @@ AllNodesCondition_copy9 = AllNodesCondition.copy()
 # print("849-----AvailWieghtsPerNode: {0}".format(AvailWieghtsPerNode))
 
 
-excel_path = "WeightDataTemplate.csv"
+PredictedProbability_path = "WeightDataTemplateOneWeek.csv"
 
-resource_mapping = load_resource_mapping_from_excel(
-    excel_path,
-    resource_column='Resource',
-    weight_column='Weight'
+resource_mapping = load_resource_mapping_from_csv(
+    PredictedProbability_path,
+    resource_column='ProviderID',
+    weight_column='Available_Prob',
+    scale_factor = 10.0,
+    default_for_E = 0.0
 )
-
+# append_number_from_resource_mapping
+# append_assigned_numbers
 AvailWieghtsPerNode = append_number_from_resource_mapping(
     AllNodesCondition_copy9,
     resource_mapping
