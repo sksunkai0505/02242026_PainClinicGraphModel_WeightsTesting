@@ -45,44 +45,36 @@ def append_assigned_numbers(data, resource_mapping):
     return new_data
 
 
-def add_assigned_number_to_node_weights(records, node_intervals, *, in_place=False, strict=True):
+def add_assigned_number_to_node_weights(
+    records,
+    node_intervals: dict,
+    *,
+    in_place=False,
+    strict=None  # kept for backward compatibility
+):
     """
-    Add the newly assigned number (last element of each record) to the existing
-    node weights in node_intervals, matching by node index (second last element).
+    Add each record's assigned number (last element) to node_intervals[node_id].
+
+    Only updates nodes that already exist in node_intervals.
+    Nodes not present are silently skipped.
 
     Parameters
     ----------
     records : list
-        Each record ends with [..., node_id, assigned_number]
-        Example: [..., 0, 40]
     node_intervals : dict
-        Existing weights keyed by string node ids, e.g. {'0': 4.36, '1': 1e-07, ...}
-    in_place : bool, optional
-        If True, modify node_intervals directly. If False (default), return a new dict.
-    strict : bool, optional
-        If True, raise an error if a node_id from records is missing in node_intervals.
-        If False, create missing keys starting at 0.0.
-
-    Returns
-    -------
-    dict
-        Updated weights dict (same object if in_place=True).
+    in_place : bool
+    strict : ignored (kept for compatibility)
     """
+
     updated = node_intervals if in_place else dict(node_intervals)
 
     for rec in records:
-        if len(rec) < 2:
-            raise ValueError(f"Record too short: {rec}")
+        node_id = rec[-2]
+        add_val = rec[-1]
+        key = str(node_id)
 
-        node_id = rec[-2]          # second last element
-        add_val = rec[-1]          # last element (new assigned number)
-
-        key = str(node_id)         # node_intervals uses string keys
-
-        if strict and key not in updated:
-            raise KeyError(f"Node '{key}' not found in node_intervals.")
         if key not in updated:
-            updated[key] = 0.0
+            continue  # skip missing nodes
 
         updated[key] = float(updated[key]) + float(add_val)
 
@@ -90,84 +82,204 @@ def add_assigned_number_to_node_weights(records, node_intervals, *, in_place=Fal
 
 
 
-def load_resource_mapping_from_csv(
-    filepath: str,
-    resource_column: str = "ProviderID",
-    weight_column: str = "Available_Prob",
-    *,
-    scale_factor: float = 10.0,
-    default_for_E: float = 0.0,
-    allow_duplicates: bool = False,
-) -> dict:
+def append_number_from_resource_mapping(
+    data,
+    mapping_csv_path,
+    Step_Number=1,
+    date_column="Date",
+    resource_column="ProviderID",
+    weight_column="Available_Prob",
+    default_for_E=0.0
+):
     """
-    Load resource->weight mapping from a CSV file and scale weights.
+    Append weight to each record based on resource mapping
+    derived from the specified Step_Number (day index).
 
-    Parameters
-    ----------
-    filepath : str
-        Path to CSV file.
-    resource_column : str
-        Column containing resource labels.
-    weight_column : str
-        Column containing numeric weights.
-    scale_factor : float
-        Multiply weight_column values by this factor (default = 10).
-    default_for_E : float
-        Default value if 'E' is not present in CSV.
-    allow_duplicates : bool
-        If True, duplicates are averaged; otherwise error.
-
-    Returns
-    -------
-    dict
-        Mapping dictionary {resource: scaled_weight}
+    If Step_Number == 1 → use first (earliest) date.
     """
 
-    df = pd.read_csv(filepath)
+    # -----------------------
+    # Load mapping CSV
+    # -----------------------
+    df = pd.read_csv(mapping_csv_path)
 
-    if resource_column not in df.columns or weight_column not in df.columns:
-        raise ValueError(
-            f"Columns not found. Need '{resource_column}' and '{weight_column}'. "
-            f"CSV has: {list(df.columns)}"
-        )
-
+    df[date_column] = pd.to_datetime(df[date_column])
     df[resource_column] = df[resource_column].astype(str).str.strip()
     df[weight_column] = pd.to_numeric(df[weight_column], errors="raise")
 
-    if df[resource_column].duplicated().any():
-        if not allow_duplicates:
-            duplicates = df.loc[df[resource_column].duplicated(), resource_column].tolist()
-            raise ValueError(f"Duplicate ProviderIDs found: {duplicates}")
-        df = df.groupby(resource_column, as_index=False)[weight_column].mean()
+    df = df.sort_values(by=date_column)
 
-    # 🔹 Scale weights
-    df[weight_column] = df[weight_column] * scale_factor
+    unique_dates = sorted(df[date_column].unique())
 
-    df = df.dropna(subset=[weight_column])
+    if Step_Number < 1 or Step_Number > len(unique_dates):
+        raise ValueError("Step_Number out of range.")
 
-    mapping = dict(zip(df[resource_column], df[weight_column]))
+    selected_date = unique_dates[Step_Number - 1]
 
-    # Ensure default for E
-    mapping.setdefault("E", float(default_for_E))
+    # Filter only selected date
+    df_step = df[df[date_column] == selected_date]
 
-    return mapping
+    # Build mapping for that date
+    resource_mapping = dict(zip(df_step[resource_column], df_step[weight_column]))
 
+    # Ensure default for 'E'
+    resource_mapping.setdefault("E", default_for_E)
 
-
-def append_number_from_resource_mapping(data, resource_mapping):
-    """
-    Append weight to each record based on resource label.
-    """
-
+    # -----------------------
+    # Original logic (unchanged)
+    # -----------------------
     new_data = copy.deepcopy(data)
 
     for record in new_data:
         resource_label = record[5][0]
 
         if resource_label not in resource_mapping:
-            raise ValueError(f"Resource '{resource_label}' not found in mapping.")
+            raise ValueError(
+                f"Resource '{resource_label}' not found for date {selected_date}."
+            )
 
         record.append(resource_mapping[resource_label])
 
     return new_data
+
+
+
+def append_number_from_resource_mapping(
+    data,
+    mapping_csv_path: str,
+    date_column: str = "Date",
+    resource_column: str = "ProviderID",
+    weight_column: str = "Available_Prob",
+    Step_Number: int = 1,
+    scale_factor: float = 1.0,
+    default_for_E: float = 0.0
+):
+    """
+    Append weight to each record based on resource mapping derived
+    from a specific step (day).
+
+    If Step_Number == 1:
+        Use the first day (earliest date) in the CSV.
+
+    Parameters
+    ----------
+    data : list
+        Your nested graph node structure.
+    mapping_csv_path : str
+        Path to cleaned CSV file.
+    date_column : str
+        Name of date column in CSV.
+    resource_column : str
+        Column containing resource IDs (e.g., R1).
+    weight_column : str
+        Column containing weights.
+    Step_Number : int
+        Determines which day's mapping to use.
+    scale_factor : float
+        Multiply weights by this factor.
+    default_for_E : float
+        Default value for resource 'E'.
+
+    Returns
+    -------
+    list
+        Updated node list with appended weights.
+    """
+
+    # -----------------------------
+    # Load and preprocess mapping
+    # -----------------------------
+    df = pd.read_csv(mapping_csv_path)
+
+    df[date_column] = pd.to_datetime(df[date_column])
+    df[resource_column] = df[resource_column].astype(str).str.strip()
+    df[weight_column] = pd.to_numeric(df[weight_column], errors="raise")
+
+    df = df.sort_values(by=date_column)
+
+    unique_dates = sorted(df[date_column].unique())
+
+    if Step_Number < 1 or Step_Number > len(unique_dates):
+        raise ValueError("Step_Number out of range.")
+
+    # Select date based on Step_Number
+    selected_date = unique_dates[Step_Number - 1]
+
+    df_step = df.loc[df[date_column] == selected_date].copy()
+
+    # Scale weights
+    df_step[weight_column] = df_step[weight_column] * scale_factor
+
+    # Build mapping for that day
+    resource_mapping = dict(zip(df_step[resource_column], df_step[weight_column]))
+
+    resource_mapping.setdefault("E", default_for_E)
+
+    # -----------------------------
+    # Append weights to graph data
+    # -----------------------------
+    new_data = copy.deepcopy(data)
+
+    for record in new_data:
+        resource_label = record[5][0]
+
+        if resource_label not in resource_mapping:
+            raise ValueError(f"Resource '{resource_label}' not found for date {selected_date}.")
+
+        record.append(resource_mapping[resource_label])
+
+    return new_data
+
+
+
+def preprocess_remove_pre_monday_and_weekends(
+    input_filepath: str,
+    output_filepath: str,
+    date_column: str = "Date"
+):
+    """
+    Preprocess CSV data by:
+      1) Removing all rows before the first Monday
+      2) Removing all weekend rows (Saturday, Sunday)
+      3) Saving cleaned table to a new CSV
+
+    Parameters
+    ----------
+    input_filepath : str
+        Path to input CSV file.
+    output_filepath : str
+        Path to save processed CSV file.
+    date_column : str
+        Name of the date column.
+    """
+
+    # Load file
+    df = pd.read_csv(input_filepath)
+
+    # Validate date column
+    if date_column not in df.columns:
+        raise ValueError(f"Column '{date_column}' not found in CSV. Columns: {list(df.columns)}")
+
+    # Convert to datetime
+    df[date_column] = pd.to_datetime(df[date_column], errors="raise")
+
+    # Sort by date (important for determining first Monday)
+    df = df.sort_values(by=date_column)
+
+    # Find first Monday
+    first_monday = df.loc[df[date_column].dt.weekday == 0, date_column].min()
+
+    if pd.isna(first_monday):
+        raise ValueError("No Monday found in dataset.")
+
+    # Remove rows before first Monday
+    df = df[df[date_column] >= first_monday]
+
+    # Remove weekends (Saturday=5, Sunday=6)
+    df = df[df[date_column].dt.weekday < 5]
+
+    # Save output
+    df.to_csv(output_filepath, index=False)
+
+    print(f"Preprocessing complete. Cleaned file saved to: {output_filepath}")
 
