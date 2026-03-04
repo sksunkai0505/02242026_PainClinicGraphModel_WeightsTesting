@@ -15,17 +15,29 @@ import random
 
 random.seed(3)
 ##############################################################################################################
+# def getNodeListGWMINOrder(G_function):
+#     G_function_copy = G_function.copy()
+#     GWMIN_list = []
+#     # get the node list sorted by degrees
+#     for node in list(G_function_copy.nodes):
+#         node_degree = float(G_function_copy.degree[node])
+#         node_weight = float(nodes_intervals.get(node))
+#         GWMIN_list = GWMIN_list + [node_weight/(node_degree + 1)]
+#     nodes_with_GWMIN = dict(zip(list(G_function_copy.nodes), GWMIN_list))
+#     node_list_GWMIN_order = sorted(nodes_with_GWMIN, key=nodes_with_GWMIN.get, reverse=True) #descending
+#     return node_list_GWMIN_order
+
 def getNodeListGWMINOrder(G_function):
-    G_function_copy = G_function.copy()
-    GWMIN_list = []
-    # get the node list sorted by degrees
-    for node in list(G_function_copy.nodes):
-        node_degree = float(G_function_copy.degree[node])
-        node_weight = float(nodes_intervals.get(node))
-        GWMIN_list = GWMIN_list + [node_weight/(node_degree + 1)]
-    nodes_with_GWMIN = dict(zip(list(G_function_copy.nodes), GWMIN_list))
-    node_list_GWMIN_order = sorted(nodes_with_GWMIN, key=nodes_with_GWMIN.get, reverse=True) #descending
-    return node_list_GWMIN_order
+    deg = G_function.degree
+    get_w = nodes_intervals.get
+
+    return sorted(
+        G_function.nodes,
+        key=lambda n: (get_w(n, 0.0) / (deg[n] + 1)),
+        reverse=True
+    )
+
+
 
 
 def getMiddleNodeForTrees(G_function):
@@ -822,7 +834,8 @@ print("30-----weight of length in same job: {0}".format(LW_value))
 #Input_File = 'input_T111_TS10_liteF3.txt'
 # Input_File = 'input_Week1_lite.txt'
 # Input_File = 'input_Week1.txt' # about 0.6s
-Input_File = 'input_Week2.txt'   # about 15s
+# Input_File = 'input_Week2.txt'   # about 15s
+Input_File = 'input_Week2_update.txt'   # about 15s
 # print("35-----The Input_File: {0}".format(Input_File))
 
 # load all the tasks
@@ -838,10 +851,10 @@ Tasks_dict = eval(Tasks.read())
 #print("2444-----Input Tasks_dict------: {0}".format(Tasks_dict))
 
 Pre_AllNodesCondition = AllNodesConditions(Tasks_dict, resources_order)
-print("839-----Pre_AllNodesCondition: {0}".format(Pre_AllNodesCondition))
+# print("839-----Pre_AllNodesCondition: {0}".format(Pre_AllNodesCondition))
 
 AllNodesCondition = ADDIndexToAllNodesCondition(Pre_AllNodesCondition)
-print("842-----original AllNodesCondition: {0}".format(AllNodesCondition))
+# print("842-----original AllNodesCondition: {0}".format(AllNodesCondition))
 
 AllNodesCondition_copy9 = AllNodesCondition.copy()
 # resource_mapping = {
@@ -863,7 +876,7 @@ AllNodesCondition_copy9 = AllNodesCondition.copy()
 # print("849-----AvailWieghtsPerNode: {0}".format(AvailWieghtsPerNode))
 
 Step_Number = 1
-print("866------Step_Number: {0}".format(Step_Number))
+print("879------Step_Number: {0}".format(Step_Number))
 
 PredictedProbability_path = "WeightDataTemplate_Cleaned.csv"
 
@@ -874,7 +887,7 @@ AvailWieghtsPerNode = append_number_from_resource_mapping(
     scale_factor=10.0,
     default_for_E=0.0
 )
-print("877-----AvailWieghtsPerNode: {0}".format(AvailWieghtsPerNode))
+# print("877-----AvailWieghtsPerNode: {0}".format(AvailWieghtsPerNode))
 
 
 AllNodesCondition_copy = AllNodesCondition.copy()
@@ -886,7 +899,7 @@ AllNodesCondition_copy99 = AllNodesCondition.copy()
 #print("2595-----original AllNodesCondition: {0}".format(AllNodesCondition))
 #print("1262-----length testing: {0}".format(len(Pre_AllNodesCondition)))
 Edges_List = FunctionEdgesList(AllNodesCondition)
-print("64-----Edges_List: {0}".format(Edges_List))
+# print("64-----Edges_List: {0}".format(Edges_List))
 print("65-----Number of Edges: {0}".format(len(Edges_List)))
 
 G = nx.Graph()
@@ -943,7 +956,7 @@ Final_NodesANDWeights_dict = FinalWeightsForColoring(NodesANDWeights_dict, final
 
 # getting nodes and associated intervals internal
 nodes_intervals = Final_NodesANDWeights_dict
-print("926-----nodes_intervals: {0}".format(nodes_intervals))
+# print("926-----nodes_intervals: {0}".format(nodes_intervals))
 
 
 
@@ -953,7 +966,7 @@ new_node_intervals = add_assigned_number_to_node_weights(
     in_place=False,                   # keep original dict unchanged
     strict=True                       # error if any node id is missing
 )
-print("934-----new_node_intervals : {0}".format(new_node_intervals))
+# print("934-----new_node_intervals : {0}".format(new_node_intervals))
 
 nodes_intervals = new_node_intervals
 
@@ -998,7 +1011,7 @@ LevelAndNodes_dict = {}
 #--------------------------------------------
 # A3 GWMIN
 
-
+print("1014------Step_Number: {0}".format(Step_Number))
 Color0_list = A3getListInColoringOrder(G_copy2)
 
 
@@ -1130,17 +1143,17 @@ AvailWieghtsPerNode = append_number_from_resource_mapping(
     scale_factor=10.0,
     default_for_E=0.0
 )
-print("1133-----AvailWieghtsPerNode: {0}".format(AvailWieghtsPerNode))
+# print("1133-----AvailWieghtsPerNode: {0}".format(AvailWieghtsPerNode))
 
 
-print("1136-----nodes_intervals: {0}".format(nodes_intervals))
+# print("1136-----nodes_intervals: {0}".format(nodes_intervals))
 new_node_intervals = add_assigned_number_to_node_weights(
     records=AvailWieghtsPerNode,      # your list of records ending with [node_id, assigned]
     node_intervals=nodes_intervals,   # your existing dict
     in_place=False,                   # keep original dict unchanged
     strict=True                       # error if any node id is missing
 )
-print("1143-----new_node_intervals : {0}".format(new_node_intervals))
+# print("1143-----new_node_intervals : {0}".format(new_node_intervals))
 nodes_intervals = new_node_intervals
 
 
@@ -1268,7 +1281,7 @@ while list(G_step3.nodes) != []:
     nodes_intervals = Final_NodesANDWeights_dict
 
     # Step_Number = 2
-    print("1122------Step_Number: {0}".format(Step_Number-1))
+    # print("1122------Step_Number: {0}".format(Step_Number-1))
 
     # PredictedProbability_path = "WeightDataTemplate_Cleaned.csv"
 
@@ -1279,16 +1292,16 @@ while list(G_step3.nodes) != []:
         scale_factor=10.0,
         default_for_E=0.0
     )
-    print("1282-----AvailWieghtsPerNode: {0}".format(AvailWieghtsPerNode))
+    # print("1282-----AvailWieghtsPerNode: {0}".format(AvailWieghtsPerNode))
 
-    print("1284-----nodes_intervals: {0}".format(nodes_intervals))
+    # print("1284-----nodes_intervals: {0}".format(nodes_intervals))
     new_node_intervals = add_assigned_number_to_node_weights(
         records=AvailWieghtsPerNode,  # your list of records ending with [node_id, assigned]
         node_intervals=nodes_intervals,  # your existing dict
         in_place=False,  # keep original dict unchanged
         strict=True  # error if any node id is missing
     )
-    print("1291-----new_node_intervals : {0}".format(new_node_intervals))
+    # print("1291-----new_node_intervals: {0}".format(new_node_intervals))
     nodes_intervals = new_node_intervals
 
     node_list_interval_order = getIntervalOrder(nodes_intervals)

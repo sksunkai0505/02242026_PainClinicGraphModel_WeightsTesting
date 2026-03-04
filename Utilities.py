@@ -1,4 +1,4 @@
-from itertools import combinations
+from itertools import combinations, chain
 import networkx as nx
 
 # # inputs
@@ -27,6 +27,7 @@ def getKeysByValue(dictOfElements, valueToFind):
 
 def removeSublistfromList(parent_list, sublist):
     return [x for x in parent_list if x not in sublist]
+
 
 
 def keepSublistfromList(parent_list, sublist):

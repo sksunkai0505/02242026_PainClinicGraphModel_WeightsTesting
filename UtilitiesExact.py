@@ -1,22 +1,34 @@
 import networkx as nx
 from Utilities import *
+from itertools import chain
 from networkx.algorithms import bipartite
 
+# def subgraphWithNodesInList(G_function, node_list_keeping):
+#     G_for_function = G_function.copy()
+#     node_to_remove = removeSublistfromList(list(G_for_function.nodes), node_list_keeping)
+#     for node in node_to_remove:
+#         G_for_function.remove_node(node)
+#     return G_for_function
+
+
 def subgraphWithNodesInList(G_function, node_list_keeping):
-    G_for_function = G_function.copy()
-    node_to_remove = removeSublistfromList(list(G_for_function.nodes), node_list_keeping)
-    for node in node_to_remove:
-        G_for_function.remove_node(node)
-    return G_for_function
+    G = G_function.copy()
+    keep = set(node_list_keeping)
+    G.remove_nodes_from(set(G.nodes) - keep)
+    return G
+
+
+# def neighborsCheck(G, nodes_to_check):
+#     #checking for the final output list
+#     neighbors_list_final = []
+#     for node in nodes_to_check:
+#         neighbors_list = list(G.neighbors(node))
+#         neighbors_list_final = neighbors_list_final + neighbors_list
+#     return neighbors_list_final
 
 
 def neighborsCheck(G, nodes_to_check):
-    #checking for the final output list
-    neighbors_list_final = []
-    for node in nodes_to_check:
-        neighbors_list = list(G.neighbors(node))
-        neighbors_list_final = neighbors_list_final + neighbors_list
-    return neighbors_list_final
+    return list(chain.from_iterable(G.neighbors(node) for node in nodes_to_check))
 
 
 def subgraphWithoutNodesInList(G_function, node_list_removal):
