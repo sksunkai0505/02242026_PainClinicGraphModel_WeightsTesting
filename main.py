@@ -1288,7 +1288,7 @@ while list(G_step3.nodes) != []:
     AvailWieghtsPerNode = append_number_from_resource_mapping(
         data=AllNodesCondition_copy9,
         mapping_csv_path=PredictedProbability_path,
-        Step_Number=Step_Number,
+        Step_Number=Step_Number-1,
         scale_factor=10.0,
         default_for_E=0.0
     )

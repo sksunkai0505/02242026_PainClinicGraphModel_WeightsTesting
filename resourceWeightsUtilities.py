@@ -199,9 +199,6 @@ def append_number_from_resource_mapping(
 
     unique_dates = sorted(df[date_column].unique())
 
-    if Step_Number < 1 or Step_Number > len(unique_dates):
-        raise ValueError("Step_Number out of range.")
-
     # Select date based on Step_Number
     selected_date = unique_dates[Step_Number - 1]
 
@@ -229,6 +226,10 @@ def append_number_from_resource_mapping(
         record.append(resource_mapping[resource_label])
 
     return new_data
+
+
+
+
 
 
 
