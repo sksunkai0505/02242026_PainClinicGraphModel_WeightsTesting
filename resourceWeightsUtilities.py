@@ -284,3 +284,104 @@ def preprocess_remove_pre_monday_and_weekends(
 
     print(f"Preprocessing complete. Cleaned file saved to: {output_filepath}")
 
+
+def update_weight_template(
+    logistic_file: str,
+    template_file: str,
+    output_file: str
+) -> None:
+    """
+    Update WeightDataTemplate using probabilities from LLL_Logistic_OR.
+
+    Matching keys:
+        - Faculty/Staff Name
+        - Date
+
+    Updated columns:
+        - Not_Available_Prob
+        - Available_Prob
+    """
+
+    # Read files
+    logistic_df = pd.read_csv(logistic_file)
+    template_df = pd.read_csv(template_file)
+
+    # Required columns
+    logistic_required = [
+        "Faculty/Staff Name",
+        "Date",
+        "Not_Available_Prob",
+        "Available_Prob",
+    ]
+    template_required = [
+        "Faculty/Staff Name",
+        "Date",
+        "Not_Available_Prob",
+        "Available_Prob",
+    ]
+
+    for col in logistic_required:
+        if col not in logistic_df.columns:
+            raise ValueError(f"Missing column in logistic file: {col}")
+
+    for col in template_required:
+        if col not in template_df.columns:
+            raise ValueError(f"Missing column in template file: {col}")
+
+    # Normalize dates so the two files can match
+    logistic_df["Date"] = pd.to_datetime(logistic_df["Date"], errors="coerce").dt.strftime("%Y-%m-%d")
+    template_df["Date"] = pd.to_datetime(template_df["Date"], errors="coerce").dt.strftime("%Y-%m-%d")
+
+    # Check for invalid dates
+    if logistic_df["Date"].isna().any():
+        raise ValueError("Some dates in logistic file could not be parsed.")
+    if template_df["Date"].isna().any():
+        raise ValueError("Some dates in template file could not be parsed.")
+
+    # Keep only needed columns from logistic file
+    logistic_probs = logistic_df[
+        ["Faculty/Staff Name", "Date", "Not_Available_Prob", "Available_Prob"]
+    ].copy()
+
+    # Check for duplicate keys in logistic file
+    dupes = logistic_probs.duplicated(subset=["Faculty/Staff Name", "Date"], keep=False)
+    if dupes.any():
+        duplicate_rows = logistic_probs.loc[dupes, ["Faculty/Staff Name", "Date"]]
+        raise ValueError(
+            "Duplicate match keys found in logistic file:\n"
+            f"{duplicate_rows.drop_duplicates().to_string(index=False)}"
+        )
+
+    # Merge updated probabilities into template
+    merged = template_df.merge(
+        logistic_probs,
+        on=["Faculty/Staff Name", "Date"],
+        how="left",
+        suffixes=("_old", "")
+    )
+
+    # Report unmatched rows
+    unmatched = merged["Not_Available_Prob"].isna() | merged["Available_Prob"].isna()
+    unmatched_count = unmatched.sum()
+
+    if unmatched_count > 0:
+        print(f"Warning: {unmatched_count} rows in template had no match in logistic file.")
+        print("Unmatched examples:")
+        print(merged.loc[unmatched, ["Faculty/Staff Name", "Date"]].head(10).to_string(index=False))
+
+    # If there was no match, keep original values
+    merged["Not_Available_Prob"] = merged["Not_Available_Prob"].fillna(merged["Not_Available_Prob_old"])
+    merged["Available_Prob"] = merged["Available_Prob"].fillna(merged["Available_Prob_old"])
+
+    # Restore original template column order
+    final_df = merged[template_df.columns]
+
+    # Save output
+    final_df.to_csv(output_file, index=False)
+
+    print(f"Done. Updated file saved to: {output_file}")
+    print(f"Total rows: {len(final_df)}")
+    print(f"Matched rows: {len(final_df) - unmatched_count}")
+    print(f"Unmatched rows: {unmatched_count}")
+
+
